@@ -1,0 +1,9 @@
+{
+    "version": 2,
+    "name": "scarRecognition",
+    "builds": [
+        { "src": "*.py", "use": "@now/python@canary",
+          "config": { "maxLambdaSize": "50mb" }
+        }
+    ]
+}

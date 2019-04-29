@@ -1,0 +1,4 @@
+imutils==0.5.2
+opencv-python==4.0.0.21
+jsonschema==2.6.0
+cloudinary==1.15.0
