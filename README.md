@@ -1,5 +1,9 @@
-scar_recognition
+# Scar Recognition
 
 handler.py - wrapper for aws
+
 index.py - wrapper for now
-process.py - does the 
+
+process.py - does the image processing and finds the scar. Its called in both handler.py and index.py and returns appropriate scar data
+
+
