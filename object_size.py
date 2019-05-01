@@ -1,10 +1,7 @@
-from imutils import perspective
-from imutils import contours
 import numpy as np
-import imutils
 import cv2
 import json
-import urllib
+import urllib.request
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -19,36 +16,32 @@ def colour(image, contour):
 	mean = cv2.mean(image, mask=mask)[:3]
 	return mean
 
-def imageProcessing(imageURL, scarID, url):
-# load the image, convert it to grayscale, and blur it slightly
+def imageProcessing(imageURL, scarID):
+    # load the image, convert it to grayscale, and blur it slightly
 	resp = urllib.request.urlopen(imageURL)
 	image = np.asarray(bytearray(resp.read()), dtype="uint8")
 	image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
 	# img = io.imread(imageURL)
 	# image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-	blurred = cv2.pyrMeanShiftFiltering(image, 21,27)
+	blurred = cv2.pyrMeanShiftFiltering(image, 21,35)
 	#blurred = cv2.GaussianBlur(image, (7,7), 0)
 	gray = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
 
 	# perform edge detection, then perform a dilation + erosion to
 	# close gaps in between object edges
 	edged = cv2.Canny(gray, 2,20)
-	edged = cv2.dilate(edged, None, iterations=1)
-	edged = cv2.erode(edged, None, iterations=1)
-	edged = cv2.morphologyEx(edged, cv2.MORPH_GRADIENT, None)
+	#edged = cv2.dilate(edged, None, iterations=1)
+	#edged = cv2.erode(edged, None, iterations=1)
+	#edged = cv2.morphologyEx(edged, cv2.MORPH_GRADIENT, None)
 
 	# find contours in the edge map
 	cnts = cv2.findContours(edged, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
-	cnts = imutils.grab_contours(cnts)
-
-	# sort the contours from left-to-right and initialize the
-	# "pixels per metric" calibration variable
-	(cnts, _) = contours.sort_contours(cnts)
+	cnts = cnts[0]
 	pixelsPerMetric = None
 
 	# loop over the contours individually
-	for c in cnts[1:]:
+	for c in cnts:
 		# if the contour is not sufficiently large, ignore it
 		if cv2.contourArea(c) < 1000:
 			continue
@@ -56,14 +49,10 @@ def imageProcessing(imageURL, scarID, url):
 		# compute the rotated bounding box of the contour
 		orig = image.copy()
 		box = cv2.minAreaRect(c)
-		box = cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
+		box = cv2.boxPoints(box)
 		box = np.array(box, dtype="int")
 
-		# order the points in the contour such that they appear
-		# in top-left, top-right, bottom-right, and bottom-left
-		# order, then draw the outline of the rotated bounding
-		# box
-		box = perspective.order_points(box)
+
 		cv2.drawContours(orig, [box.astype("int")], -1, (255, 255, 255), 2)
 
 		# loop over the original points and draw them
@@ -105,7 +94,7 @@ def imageProcessing(imageURL, scarID, url):
 		# compute it as the ratio of pixels to supplied metric
 		# (in this case, inches)
 		if pixelsPerMetric is None:
-			pixelsPerMetric = dB / 23.03 #<- £1 is 23.03mm in diameter
+			pixelsPerMetric = dB / 40.0 #<- £1 is 23.03mm in diameter
 
 		# compute the size of the object
 		dimA = dA / pixelsPerMetric
@@ -135,20 +124,12 @@ def imageProcessing(imageURL, scarID, url):
 		#post request to cloudinary
 		response  = cloudinary.uploader.unsigned_upload(path, "woundscars", cloud_name = 'nikolamus')	
 		newImageURL = response['url']
-		#post request to nodejs
-		# post_json = json.dumps({"scarID": scarID,
-		# 		"imageURL": newImageURL,
-		# 		"scarLength": dimA,
-		# 		"scarWidth": dimB,
-		# 		"scarSA": contourArea,
-		# 		"scarRGB": averageColour})
-		# response2 = requests.post(url = url, json = post_json)
+
 		return newImageURL, scarID, dimA, dimB, contourArea, scarColour
-		#print(response2)
 
 
 # example_imageURL = "https://res.cloudinary.com/nikolamus/image/upload/v1556297408/wounds-scars/tfk1zzbb26d63avaj1ib.png"
 # example_url = "https://www.google.com/"
 # example_scarID = 1
-# imageProcessing(example_imageURL,example_scarID,example_url)
+# imageProcessing(example_imageURL,example_scarID)
 
